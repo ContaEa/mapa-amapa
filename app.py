@@ -154,7 +154,7 @@ if dados_calor_azul:
 # --- INCLUSÃO DAS 6 ROTAS LOGÍSTICAS ---
 camada_rotas = folium.FeatureGroup(name='📍 Linhas das 6 Rotas Logísticas (Atendentes)')
 
-def tracar_linha_rota(lista_cidades, cor_linha, nome_rota):
+def congenital_linha_rota(lista_cidades, cor_linha, nome_rota):
     pontos_linha = []
     for cidade in lista_cidades:
         cidade_limpa = cidade.strip().lower()
@@ -170,17 +170,35 @@ def tracar_linha_rota(lista_cidades, cor_linha, nome_rota):
         folium.PolyLine(pontos_linha, color=cor_linha, weight=5, opacity=0.85, tooltip=nome_rota).add_to(camada_rotas)
 
 # Traçando as 6 rotas logísticas simultâneas
-tracar_linha_rota(['Macapá', 'Calçoene', 'Oiapoque'], 'red', 'Atendente 1 - Rota Norte Extremo')
-tracar_linha_rota(['Macapá', 'Tartarugalzinho', 'Pracuúba', 'Amapá'], 'orange', 'Atendente 2 - Rota Norte Central')
-tracar_linha_rota(['Macapá', 'Porto Grande', 'Pedra Branca do Amapari', 'Serra do Navio'], 'purple', 'Atendente 3 - Rota Centro-Oeste')
-tracar_linha_rota(['Macapá', 'Santana', 'Mazagão', 'Cutias'], 'green', 'Atendente 4 - Rota Sul Metropolitano')
-tracar_linha_rota(['Macapá', 'Laranjal do Jari', 'Vitória do Jari'], 'darkblue', 'Atendente 5 - Rota Vale do Jari')
-tracar_linha_rota(['Macapá', 'Itaubal', 'Ferreira Gomes'], 'pink', 'Atendente 6 - Rota Transversal Leste-Centro')
+congenital_linha_rota(['Macapá', 'Calçoene', 'Oiapoque'], 'red', 'Atendente 1 - Rota Norte Extremo')
+congenital_linha_rota(['Macapá', 'Tartarugalzinho', 'Pracuúba', 'Amapá'], 'orange', 'Atendente 2 - Rota Norte Central')
+congenital_linha_rota(['Macapá', 'Porto Grande', 'Pedra Branca do Amapari', 'Serra do Navio'], 'purple', 'Atendente 3 - Rota Centro-Oeste')
+congenital_linha_rota(['Macapá', 'Santana', 'Mazagão', 'Cutias'], 'green', 'Atendente 4 - Rota Sul Metropolitano')
+congenital_linha_rota(['Macapá', 'Laranjal do Jari', 'Vitória do Jari'], 'darkblue', 'Atendente 5 - Rota Vale do Jari')
+congenital_linha_rota(['Macapá', 'Itaubal', 'Ferreira Gomes'], 'pink', 'Atendente 6 - Rota Transversal Leste-Centro')
 
 camada_rotas.add_to(mapa)
 folium.LayerControl().add_to(mapa)
 
-# Renderiza o mapa na tela
+# --- 📥 IMPLEMENTAÇÃO: EXPORTAÇÃO DO MAPA OFFLINE ---
+# Converte a visualização atual do Folium em bytes HTML na memória
+mapa_html_bytes = BytesIO()
+mapa.save(mapa_html_bytes, close_file=False)
+mapa_html_bytes.seek(0)
+
+# Criando a seção de download na barra lateral do Streamlit
+st.sidebar.markdown("---")
+st.sidebar.subheader("📱 Uso Offline no iPad")
+st.sidebar.download_button(
+    label="📥 Baixar Mapa Interativo (HTML)",
+    data=mapa_html_bytes,
+    file_name="mapa_calor_offline.html",
+    mime="text/html",
+    help="Clique para baixar o mapa atualizado com os filtros selecionados para usar sem internet."
+)
+st.sidebar.caption("💡 Dica: No iPad, abra o arquivo usando aplicativos como 'Documents' ou 'Koder' para que a interatividade funcione 100% offline.")
+
+# Renderiza o mapa na tela do Streamlit normalmente
 st_folium(mapa, width=1000, height=600)
 
 # Painel de Indicadores
