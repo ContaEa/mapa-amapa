@@ -7,7 +7,7 @@ from io import BytesIO
 
 # Configuração da página do Streamlit
 st.set_page_config(page_title="Mapa de Calor de Clientes", layout="wide")
-st.title("🗺️ Mapa de Calor - Referência vs. Convertidos (6 Rotas Simultâneas)")
+st.title("🗺️ Mapa de Calor - Referência vs. Colmeias (6 Rotas Simultâneas)")
 
 # COORDENADAS FIXAS E DEFINITIVAS DOS MUNICÍPIOS DO AMAPÁ (Evita bloqueios de internet)
 @st.cache_data
@@ -36,7 +36,7 @@ def obter_coordenadas_fixas():
 @st.cache_data
 def carregar_dados():
     df_ref = pd.read_excel("seus_dados.xlsx", engine="openpyxl")
-    df_conv = pd.read_excel("convertidos.xlsx", engine="openpyxl")
+    df_colmeias = pd.read_excel("convertidos.xlsx", engine="openpyxl")
     
     # Função para limpar colunas duplicadas
     def renomear_duplicados(df):
@@ -54,12 +54,12 @@ def carregar_dados():
         return df
 
     df_ref = renomear_duplicados(df_ref)
-    df_conv = renomear_duplicados(df_conv)
+    df_colmeias = renomear_duplicados(df_colmeias)
     
-    return df_ref, df_conv
+    return df_ref, df_colmeias
 
 try:
-    df_ref, df_conv = carregar_dados()
+    df_ref, df_colmeias = carregar_dados()
 except FileNotFoundError:
     st.error("Erro: Não encontrei os arquivos Excel. Garanta que os nomes sejam exatamente 'seus_dados.xlsx' e 'convertidos.xlsx'.")
     st.stop()
@@ -76,13 +76,13 @@ col_clie_ref = encontrar_coluna_real(df_ref.columns, 'cliente')
 col_aten_ref = encontrar_coluna_real(df_ref.columns, 'atendente')
 col_apon_ref = encontrar_coluna_real(df_ref.columns, 'apontador')
 
-col_muni_conv = encontrar_coluna_real(df_conv.columns, 'municipio')
-col_aten_conv = encontrar_coluna_real(df_conv.columns, 'atendente')
-col_apon_conv = encontrar_coluna_real(df_conv.columns, 'apontador')
+col_muni_colmeias = encontrar_coluna_real(df_colmeias.columns, 'municipio')
+col_aten_colmeias = encontrar_coluna_real(df_colmeias.columns, 'atendente')
+col_apon_colmeias = encontrar_coluna_real(df_colmeias.columns, 'apontador')
 
 # Limpeza rigorosa de textos (remove espaços extras no início e fim de tudo)
 for df, col in [(df_ref, col_muni_ref), (df_ref, col_clie_ref), (df_ref, col_aten_ref), (df_ref, col_apon_ref),
-                (df_conv, col_muni_conv), (df_conv, col_aten_conv), (df_conv, col_apon_conv)]:
+                (df_colmeias, col_muni_colmeias), (df_colmeias, col_aten_colmeias), (df_colmeias, col_apon_colmeias)]:
     if col:
         df[col] = df[col].astype(str).str.strip().str.replace(r'\s+', ' ', regex=True)
 
@@ -93,20 +93,20 @@ st.sidebar.header("Filtros de Visão")
 
 # Municípios
 muni_ref_set = set(df_ref[col_muni_ref].str.lower().unique()) if col_muni_ref else set()
-muni_conv_set = set(df_conv[col_muni_conv].str.lower().unique()) if col_muni_conv else set()
-municipios_disponiveis = sorted(list(muni_ref_set.union(muni_conv_set).intersection(set(coords_dict.keys()))))
+muni_colmeias_set = set(df_colmeias[col_muni_colmeias].str.lower().unique()) if col_muni_colmeias else set()
+municipios_disponiveis = sorted(list(muni_ref_set.union(muni_colmeias_set).intersection(set(coords_dict.keys()))))
 municipio_selecionado = st.sidebar.multiselect("Selecione o Município:", options=municipios_disponiveis, default=municipios_disponiveis)
 
 # Atendentes
 aten_ref_set = set(df_ref[col_aten_ref].unique()) if col_aten_ref else set()
-aten_conv_set = set(df_conv[col_aten_conv].unique()) if col_aten_conv else set()
-atendentes_disponiveis = sorted([a for a in aten_ref_set.union(aten_conv_set) if str(a).lower() != 'nan' and str(a) != ''])
+aten_colmeias_set = set(df_colmeias[col_aten_colmeias].unique()) if col_aten_colmeias else set()
+atendentes_disponiveis = sorted([a for a in aten_ref_set.union(aten_colmeias_set) if str(a).lower() != 'nan' and str(a) != ''])
 atendente_selecionado = st.sidebar.multiselect("Selecione o Atendente:", options=atendentes_disponiveis, default=atendentes_disponiveis)
 
 # Apontadores
 apon_ref_set = set(df_ref[col_apon_ref].unique()) if col_apon_ref else set()
-apon_conv_set = set(df_conv[col_apon_conv].unique()) if col_apon_conv else set()
-apontadores_disponiveis = sorted([p for p in apon_ref_set.union(apon_conv_set) if str(p).lower() != 'nan' and str(p) != ''])
+apon_colmeias_set = set(df_colmeias[col_apon_colmeias].unique()) if col_apon_colmeias else set()
+apontadores_disponiveis = sorted([p for p in apon_ref_set.union(apon_colmeias_set) if str(p).lower() != 'nan' and str(p) != ''])
 apontador_selecionado = st.sidebar.multiselect("Selecione o parceiro:", options=apontadores_disponiveis, default=apontadores_disponiveis)
 
 # --- FILTRAGEM DOS DADOS ---
@@ -116,10 +116,10 @@ df_ref_filtrado = df_ref[
     (df_ref[col_apon_ref].isin(apontador_selecionado) if col_apon_ref else True)
 ]
 
-df_conv_filtrado = df_conv[
-    (df_conv[col_muni_conv].str.lower().isin(municipio_selecionado)) &
-    (df_conv[col_aten_conv].isin(atendente_selecionado)) &
-    (df_conv[col_apon_conv].isin(apontador_selecionado))
+df_colmeias_filtrado = df_colmeias[
+    (df_colmeias[col_muni_colmeias].str.lower().isin(municipio_selecionado)) &
+    (df_colmeias[col_aten_colmeias].isin(atendente_selecionado)) &
+    (df_colmeias[col_apon_colmeias].isin(apontador_selecionado))
 ]
 
 # --- PREPARAÇÃO DOS DADOS DO MAPA ---
@@ -132,8 +132,8 @@ for _, row in df_ref_filtrado.iterrows():
         lat, lon = coords_dict[muni]
         dados_calor_vermelho.append([lat, lon, 1])
 
-for _, row in df_conv_filtrado.iterrows():
-    muni = str(row[col_muni_conv]).strip().lower()
+for _, row in df_colmeias_filtrado.iterrows():
+    muni = str(row[col_muni_colmeias]).strip().lower()
     if muni in coords_dict:
         lat, lon = coords_dict[muni]
         dados_calor_azul.append([lat, lon, 1])
@@ -147,9 +147,9 @@ if dados_calor_vermelho:
     camada_ref.add_to(mapa)
 
 if dados_calor_azul:
-    camada_conv = folium.FeatureGroup(name='Mancha Azul (Convertidos)')
-    HeatMap(dados_calor_azul, radius=20, blur=15, gradient={0.4: 'lightblue', 0.8: 'blue', 1.0: 'darkblue'}).add_to(camada_conv)
-    camada_conv.add_to(mapa)
+    camada_colmeias = folium.FeatureGroup(name='Mancha Azul (Colmeias)')
+    HeatMap(dados_calor_azul, radius=20, blur=15, gradient={0.4: 'lightblue', 0.8: 'blue', 1.0: 'darkblue'}).add_to(camada_colmeias)
+    camada_colmeias.add_to(mapa)
 
 # --- INCLUSÃO DAS 6 ROTAS LOGÍSTICAS ---
 camada_rotas = folium.FeatureGroup(name='📍 Linhas das 6 Rotas Logísticas (Atendentes)')
@@ -204,7 +204,7 @@ st_folium(mapa, width=1000, height=600)
 # Painel de Indicadores
 col1, col2 = st.columns(2)
 col1.metric("Clientes na Referência (Filtrados)", len(df_ref_filtrado))
-col2.metric("Clientes Convertidos (Filtrados)", len(df_conv_filtrado))
+col2.metric("Colmeias (Filtradas)", len(df_colmeias_filtrado))
 
 # Quadro Resumo das 6 Equipes
 st.info("""
